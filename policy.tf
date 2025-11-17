@@ -1,6 +1,6 @@
-resource "aws_iam_policy" "lambda_apigw_ddb_full_access" {
-  name        = "Terraform-FullAccess-Lambda-APIGateway-DynamoDB"
-  description = "Allows HCP Terraform to provision AWS Lambda, API Gateway, and DynamoDB resources"
+resource "aws_iam_policy" "lambda_apigw_ddb_sqs_full_access" {
+  name        = "Terraform-FullAccess-Lambda-APIGateway-DynamoDB-SQS"
+  description = "Allows HCP Terraform to provision AWS Lambda, API Gateway, DynamoDB, and SQS resources"
   path        = "/"
 
   policy = jsonencode({
@@ -31,8 +31,6 @@ resource "aws_iam_policy" "lambda_apigw_ddb_full_access" {
         Resource = "*"
       },
       {
-        # Needed to allow Lambda functions to access S3 buckets for deployment artifacts.
-        # The need for this is implied in creation of lambdas so S3 is not included in role name.
         Sid    = "S3AccessForLambdaDeployment",
         Effect = "Allow",
         Action = [
@@ -50,31 +48,29 @@ resource "aws_iam_policy" "lambda_apigw_ddb_full_access" {
         ]
       },
       {
-        "Effect" : "Allow",
-        "Action" : [
+        Effect : "Allow",
+        Action : [
           "kms:GenerateDataKey",
           "kms:Encrypt",
           "kms:Decrypt",
           "kms:DescribeKey"
         ],
-        "Resource" : "arn:aws:kms:us-east-2:637423387388:key/*"
+        Resource : "arn:aws:kms:us-east-2:637423387388:key/*"
       },
       {
         Sid = "PassRoleForLambda",
-        # Allows passing execution roles to Lambda functions.
-        "Effect" : "Allow",
-        "Action" : "iam:PassRole",
-        "Resource" : "*",
-        "Condition" : {
-          "StringLikeIfExists" : {
+        Effect : "Allow",
+        Action : "iam:PassRole",
+        Resource : "*",
+        Condition : {
+          StringLikeIfExists : {
             "iam:PassedToService" : "lambda.amazonaws.com"
           }
         }
       },
       {
         Effect = "Allow",
-        # Ensures full ability to provision and attach Lambda roles.
-        "Action" : [
+        Action = [
           "iam:PassRole",
           "iam:CreateRole",
           "iam:DeleteRole",
@@ -87,7 +83,6 @@ resource "aws_iam_policy" "lambda_apigw_ddb_full_access" {
           "iam:ListRolePolicies",
           "iam:ListAttachedRolePolicies",
           "iam:ListInstanceProfilesForRole",
-
           "iam:CreatePolicy",
           "iam:DeletePolicy",
           "iam:GetPolicy",
@@ -96,21 +91,27 @@ resource "aws_iam_policy" "lambda_apigw_ddb_full_access" {
           "iam:DeletePolicyVersion",
           "iam:ListPolicyVersions"
         ],
-        "Resource" : [
-          # Enforce naming convention for Lambda execution role.
+        Resource = [
           "arn:aws:iam::637423387388:role/LambdaExecutionRole-*",
           "arn:aws:iam::637423387388:role/LambdaPolicy-*",
           "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
         ]
       },
       {
-        # Needed to provision logging groups for Lambda functions.
         Sid    = "CloudWatchLogs",
         Effect = "Allow",
         Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
+        ],
+        Resource = "*"
+      },
+      {
+        Sid    = "SQSFullAccess",
+        Effect = "Allow",
+        Action = [
+          "sqs:*"
         ],
         Resource = "*"
       }
